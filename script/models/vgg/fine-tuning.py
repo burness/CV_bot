@@ -16,6 +16,7 @@ from tflearn.layers.estimator import regression
 from tflearn.data_utils import build_image_dataset_from_dir
 import os
 from config import  *
+import tensorflow as tf
 
 
 
@@ -66,23 +67,16 @@ X,Y = image_preloader('files_list', image_shape = (224,224),mode='file',categori
 
 
 num_classes = 12
-
-softmax = vgg16()
-regression = regression(softmax, optimizer='adam',
-                        loss='categorical_crossentropy',
-                        learning_rate=0.001,restore=False)
-
-model = tflearn.DNN(regression, checkpoint_path='finetuning-cv_bot',
-                    max_checkpoints=3, tensorboard_verbose=2, tensorboard_dir="./logs")
-
-
-
-model_file = os.path.join(model_path, "vgg16.tflearn")
-model.load(model_file,weights_only=True)
-
-# Start finetuning
-model.fit(X, Y, n_epoch=10, validation_set=0.1, shuffle=True,
-          show_metric=True, batch_size=64, snapshot_epoch=False, snapshot_step=200, run_id='finetuning')
-
-model.save('animal-classifier')
-# model.predict()
+with tf.device('/gpu:2'):
+    softmax = vgg16()
+    regression = regression(softmax, optimizer='adam',
+                            loss='categorical_crossentropy',
+                            learning_rate=0.001,restore=False)
+    model = tflearn.DNN(regression, checkpoint_path='finetuning-cv_bot',
+                        max_checkpoints=3, tensorboard_verbose=2, tensorboard_dir="./logs")
+    model_file = os.path.join(model_path, "vgg16.tflearn")
+    model.load(model_file,weights_only=True)
+    # Start finetuning
+    model.fit(X, Y, n_epoch=10, validation_set=0.1, shuffle=True,
+              show_metric=True, batch_size=64, snapshot_epoch=False, snapshot_step=200, run_id='finetuning')
+    model.save('animal-classifier')

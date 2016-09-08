@@ -40,4 +40,4 @@ def get_files_list(data_path):
 
 
 if __name__ == '__main__':
-    get_files_list('/data/tensorflow/nfs/burness/deeplearning/demo/CV_bot/data/train_data')
+    get_files_list('/Users/burness/git_repository/CV_bot/data/new')

@@ -13,17 +13,13 @@ to match the new task (finetuning).
 
 import tflearn
 from tflearn.layers.estimator import regression
-from tflearn.data_utils import build_image_dataset_from_dir
 import os
-from config import  *
-import tensorflow as tf
+from tflearn.data_augmentation import ImageAugmentation
 
 
-
-def vgg16(placeholderX=None):
-
+def vgg16(img_aug,placeholderX=None):
     x = tflearn.input_data(shape=[None, 224, 224, 3], name='input',
-                           placeholder=placeholderX)
+                           placeholder=placeholderX, data_augmentation=img_aug)
 
     x = tflearn.conv_2d(x, 64, 3, activation='relu', scope='conv1_1')
     x = tflearn.conv_2d(x, 64, 3, activation='relu', scope='conv1_2')
@@ -60,23 +56,27 @@ def vgg16(placeholderX=None):
 
 
 
-#
-data_dir = data_path
+
 from tflearn.data_utils import image_preloader
+
+img_aug = ImageAugmentation()
+img_aug.add_random_flip_leftright()
+img_aug.add_random_flip_updown()
+img_aug.add_random_crop([224, 224], 10)
+img_aug.add_random_rotation(max_angle=25.)
+img_aug.add_random_blur()
 X,Y = image_preloader('files_list', image_shape = (224,224),mode='file',categorical_labels=True,normalize=True,files_extension=['.jpg', '.png'])
 
 
 num_classes = 12
-with tf.device('/gpu:2'):
-    softmax = vgg16()
-    regression = regression(softmax, optimizer='adam',
-                            loss='categorical_crossentropy',
-                            learning_rate=0.001,restore=False)
-    model = tflearn.DNN(regression, checkpoint_path='finetuning-cv_bot',
-                        max_checkpoints=3, tensorboard_verbose=2, tensorboard_dir="./logs")
-    model_file = os.path.join(model_path, "vgg16.tflearn")
-    model.load(model_file,weights_only=True)
-    # Start finetuning
-    model.fit(X, Y, n_epoch=10, validation_set=0.1, shuffle=True,
-              show_metric=True, batch_size=64, snapshot_epoch=False, snapshot_step=200, run_id='finetuning')
-    model.save('animal-classifier')
+
+softmax = vgg16(img_aug)
+regression = regression(softmax, optimizer='adam',
+                        loss='categorical_crossentropy',
+                        learning_rate=0.001)
+model = tflearn.DNN(regression, checkpoint_path='finetuning-cv_bot',
+                    max_checkpoints=3, tensorboard_verbose=2, tensorboard_dir="./logs")
+
+model.fit(X, Y, n_epoch=10, validation_set=0.1, shuffle=True,
+          show_metric=True, batch_size=128, snapshot_epoch=False, snapshot_step=200, run_id='finetuning')
+model.save('animal-classifier')
